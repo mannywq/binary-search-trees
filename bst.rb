@@ -1,12 +1,14 @@
+# frozen_string_literal: true
+
 class Node
   attr_accessor :data, :left, :right
 
   include Comparable
 
-  def initialize(data = nil, left = nil, right = nil)
-    @data = data
-    @left = left
-    @right = right
+  def initialize(value = 0)
+    @data = value
+    @left = nil
+    @right = nil
   end
 
   def <=>(other)
@@ -17,94 +19,164 @@ end
 class Tree
   attr_accessor :root, :nodes
 
-  def initialize(node = nil)
-    @root = node
+  def initialize
+    @root = nil
     @nodes = 0
+    @parent = nil
   end
 
   def build_tree(array)
-    # puts '--- Build tree ---'
-    # puts "Array is: #{array.inspect}"
     return nil if array.empty?
-    return Node.new(array[0]) if array.length == 1
+    return Node.new(array[0]) if array.length < 2
 
-    mid = (array.length - 1) / 2
-
+    # puts array
+    mid = (array.length / 2)
     node = Node.new(array[mid])
-
     @root = node if @root.nil?
-    @nodes += 1
 
-    node.left = build_tree(array[0..mid])
+    node.left = build_tree(array[0..mid - 1])
     node.right = build_tree(array[mid + 1..])
 
     node
   end
 
-  def find(value)
-    start = @root
+  def find(node, value)
+    return nil if node.nil?
+    return node if node.data == value
 
-    queue = []
-
-    queue.append(start)
-
-    until queue.empty?
-
-      node = queue.shift
-      return node if node.data == value
-
-      queue.append(node.left) unless node.left.nil?
-      queue.append(node.right) unless node.right.nil?
-
-      # puts "Queue value now is #{queue.length}"
-
+    if value < node.data
+      find(node.left, value)
+    else
+      find(node.right, value)
     end
-
-    nil
   end
 
   def insert(root, value)
-    if root.nil?
-      puts "Creating new node with value #{value}"
-      return Node.new(value)
-    end
+    return Node.new(value) if root.nil?
 
     if root.data == value
       puts "#{value} exists - returning node"
       return root
     elsif root.data < value
-      puts 'Current node is less than value - Looking right'
       root.right = insert(root.right, value)
     else
-      puts 'Current node is higher than value - Looking left'
       root.left = insert(root.left, value)
     end
-
     root
+  end
+
+  def delete(node, value)
+    return node if node.nil? # Node not found
+
+    res = find(node, value)
+    if res.nil?
+      puts "Value #{value} not found in tree"
+      return node
+    end
+
+    puts "Found node at #{res}"
+
+    # Check for no children
+    if res.left.nil? && res.right.nil?
+      puts 'No children found for node'
+      parent = find_parent(res)
+      delete_leaf_node(parent, res)
+
+    # Check for one child
+    elsif res.left.nil? || res.right.nil?
+      puts 'Single child exists - swapping values and deleting'
+      parent = find_parent(res)
+      delete_single_child(parent, res)
+    # Check for two children
+    else
+      puts 'Node has two children - looking for min successor'
+
+      replacement = find_min(res.right)
+
+      parent = find_parent(replacement)
+
+      res.data = replacement.data
+
+      replacement < parent ? parent.left = nil : parent.right = nil
+
+    end
+  end
+
+  def find_parent(node, root = @root)
+    return nil if root == node
+    return root if root.left == node || root.right == node
+
+    root > node ? find_parent(node, root.left) : find_parent(node, root.right)
+  end
+
+  def delete_leaf_node(parent, value)
+    parent > value ? parent.left = nil : parent.right = nil
+  end
+
+  def delete_single_child(parent, node)
+    target = node.right || node.left
+    target > parent ? parent.right = target : parent.left = target
+  end
+
+  def find_min(node)
+    node = node.left until node.left.nil?
+    puts "Minimum of right tree is #{node.inspect}"
+    node
+  end
+
+  def in_order(node = @root)
+    return if node.nil?
+
+    in_order(node.left) if node.left
+    puts "#{node.data} "
+    in_order(node.right) if node.right
+  end
+
+  def pre_order(node)
+    puts node.data
+    pre_order(node.left) if node.left
+    in_order(node.right) if node.right
   end
 
   def print_tree(node = @root, prefix = '', is_left = true)
     return if node.nil?
 
-    print_tree(node.left, "#{prefix}#{is_left ? '│   ' : '    '}", true)
+    print_tree(node.left, "#{prefix}#{is_left ? '│   ' : '    '}", true) if node.left
     puts "#{prefix}#{is_left ? '└── ' : '┌── '}#{node.data}"
-    print_tree(node.right, "#{prefix}#{is_left ? '    ' : '│   '}", false)
+    print_tree(node.right, "#{prefix}#{is_left ? '    ' : '│   '}", false) if node.right
+  end
+
+  def level_order(node, &block)
+    array = []
+
+    if block_given?
+      array << yield(node)
+      level_order(node.left, block)
+    else
+      array << level_order(node.left) if node.left
+      array << node
+      array << level_order(node.right) if node.right
+
+    end
+    array
   end
 end
 
-arr = Array.new(10) { rand(1..100) }
+arr = Array.new(20) { rand(1..40) }
 
 sorted = arr.uniq.sort
-
-print "Array is: #{sorted.inspect}"
 
 tree = Tree.new
 
 tree.build_tree(sorted)
 
-puts "Root is #{tree.root}"
+tree.in_order
 
-tree.insert(tree.root, 81)
+puts tree.find(tree.root, sorted[6]).inspect
+tree.delete(tree.root, sorted[6])
 
-tree.print_tree
-puts tree.find(81).inspect
+# tree.in_order
+
+arr = tree.level_order(tree.root)
+
+arr.each { |node| puts node.data }
