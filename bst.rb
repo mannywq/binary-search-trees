@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'debug'
+
 class Node
   attr_accessor :data, :left, :right
 
@@ -124,18 +126,29 @@ class Tree
     node
   end
 
-  def in_order(node = @root)
+  def in_order(node = @root, &block)
     return if node.nil?
 
-    in_order(node.left) if node.left
-    puts "#{node.data} "
-    in_order(node.right) if node.right
+    in_order(node.left, &block) if node.left
+    yield(node) if block_given?
+    in_order(node.right, &block) if node.right
   end
 
-  def pre_order(node)
-    puts node.data
-    pre_order(node.left) if node.left
-    in_order(node.right) if node.right
+  def pre_order(node = @root, &block)
+    return if node.nil?
+
+    yield(node) if block_given?
+    pre_order(node.left, &block) if node.left
+    pre_order(node.right, &block) if node.right
+  end
+
+  def post_order(node = @root, &block)
+    return if node.nil?
+
+    post_order(node.left, &block) if node.left
+    post_order(node.right, &block) if node.right
+
+    yield(node) if block_given?
   end
 
   def print_tree(node = @root, prefix = '', is_left = true)
@@ -176,16 +189,23 @@ tree = Tree.new
 
 tree.build_tree(sorted)
 
-tree.in_order
-
 puts tree.find(tree.root, sorted[6]).inspect
 tree.delete(tree.root, sorted[6])
 
-# tree.in_order
+arr = []
+puts 'Level order traversal with block'
+tree.level_order do |node|
+  puts "Node: #{node.data}"
+  arr << node
+end
 
-arr = tree.level_order
+puts 'Pre order traversal with block'
+tree.pre_order { |node| puts "Node: #{node.data}" }
 
-tree.level_order { |node| puts "Data here is #{node.data}" }
+puts 'In order traversal with block'
+tree.in_order { |node| puts "Node: #{node.data}" }
 
-# puts arr
+puts 'Post order traversal with block'
+tree.post_order { |node| puts "Node: #{node.data}" }
+
 # puts arr.length
