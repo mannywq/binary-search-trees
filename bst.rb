@@ -146,19 +146,25 @@ class Tree
     print_tree(node.right, "#{prefix}#{is_left ? '    ' : '│   '}", false) if node.right
   end
 
-  def level_order(node, &block)
-    array = []
+  def level_order(node = @root)
+    queue = []
+    result = []
 
-    if block_given?
-      array << yield(node)
-      level_order(node.left, block)
-    else
-      array << level_order(node.left) if node.left
-      array << node
-      array << level_order(node.right) if node.right
+    queue << node
 
+    until queue.empty?
+
+      current = queue.shift
+      # puts current.data
+      result << if block_given?
+                  yield(current)
+                else
+                  current
+                end
+      queue << current.left unless current.left.nil?
+      queue << current.right unless current.right.nil?
     end
-    array
+    result
   end
 end
 
@@ -177,6 +183,9 @@ tree.delete(tree.root, sorted[6])
 
 # tree.in_order
 
-arr = tree.level_order(tree.root)
+arr = tree.level_order
 
-arr.each { |node| puts node.data }
+tree.level_order { |node| puts "Data here is #{node.data}" }
+
+# puts arr
+# puts arr.length
